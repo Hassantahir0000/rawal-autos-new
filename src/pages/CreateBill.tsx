@@ -23,7 +23,7 @@ const schema = z.object({
   bill5_value: z.coerce.number().min(0).max(100),
   items: z.array(itemSchema).min(1, 'Add at least one item'),
 })
-type FormData = z.infer<typeof schema>
+type BillFormData = z.infer<typeof schema>
 
 const GST_RATES = [5, 15, 16, 17, 18]
 
@@ -33,8 +33,9 @@ export default function CreateBill() {
     generateInvoiceId(mockInvoices.map(i => i.invoice_id))
   )
 
-  const { register, control, handleSubmit, setValue, formState: { errors } } = useForm<FormData>({
-    resolver: zodResolver(schema),
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { register, control, handleSubmit, formState: { errors } } = useForm<BillFormData>({
+    resolver: zodResolver(schema) as any,
     defaultValues: {
       dept: '',
       invoice_date: new Date().toISOString().split('T')[0],
@@ -50,7 +51,7 @@ export default function CreateBill() {
   const { fields, append, remove } = useFieldArray({ control, name: 'items' })
   const watchedItems = useWatch({ control, name: 'items' })
 
-  const grandTotal = (watchedItems ?? []).reduce((sum, item) => {
+  const grandTotal = (watchedItems ?? []).reduce((sum: number, item) => {
     const total = (Number(item.quantity) || 0) * (Number(item.unit_price) || 0)
     return sum + total
   }, 0)
@@ -60,8 +61,7 @@ export default function CreateBill() {
     append({ descp: `GST Applied (${rate}%)`, quantity: 1, unit_price: gstAmount, gst: rate })
   }, [grandTotal, append])
 
-  const onSubmit = (data: FormData) => {
-    console.log('Submit bill:', data)
+  const onSubmit = (_data: BillFormData) => {
     setSubmitted(true)
   }
 

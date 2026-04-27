@@ -20,7 +20,7 @@ export default function BillHistory() {
   const printRef = useRef<HTMLDivElement>(null)
 
   const handlePrint = useReactToPrint({
-    content: () => printRef.current,
+    contentRef: printRef,
     documentTitle: `Invoice-${selectedBill?.custom_id}`,
   })
 

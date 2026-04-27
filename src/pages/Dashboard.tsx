@@ -7,42 +7,10 @@ import { mockStats, mockMonthlyData, mockInvoices } from '../data/mock'
 import { formatCurrency, formatDate } from '../lib/utils'
 
 const statCards = [
-  {
-    label: 'Total Bills',
-    value: mockStats.total_bills,
-    icon: FileText,
-    color: 'bg-blue-500',
-    bg: 'bg-blue-50',
-    text: 'text-blue-600',
-    change: '+12% this month',
-  },
-  {
-    label: 'Total Amount Billed',
-    value: formatCurrency(mockStats.total_bills_amount),
-    icon: DollarSign,
-    color: 'bg-emerald-500',
-    bg: 'bg-emerald-50',
-    text: 'text-emerald-600',
-    change: '+8% this month',
-  },
-  {
-    label: 'Departments',
-    value: mockStats.total_dept,
-    icon: Building2,
-    color: 'bg-violet-500',
-    bg: 'bg-violet-50',
-    text: 'text-violet-600',
-    change: '2 added this year',
-  },
-  {
-    label: 'Average Bill',
-    value: formatCurrency(mockStats.average_total_bill),
-    icon: TrendingUp,
-    color: 'bg-amber-500',
-    bg: 'bg-amber-50',
-    text: 'text-amber-600',
-    change: '+3% this month',
-  },
+  { label: 'Total Bills', value: mockStats.total_bills, icon: FileText, bg: 'bg-blue-50', text: 'text-blue-600', change: '+12% this month' },
+  { label: 'Total Amount Billed', value: formatCurrency(mockStats.total_bills_amount), icon: DollarSign, bg: 'bg-emerald-50', text: 'text-emerald-600', change: '+8% this month' },
+  { label: 'Departments', value: mockStats.total_dept, icon: Building2, bg: 'bg-violet-50', text: 'text-violet-600', change: '2 added this year' },
+  { label: 'Average Bill', value: formatCurrency(mockStats.average_total_bill), icon: TrendingUp, bg: 'bg-amber-50', text: 'text-amber-600', change: '+3% this month' },
 ]
 
 const recentBills = mockInvoices.filter(i => i.status === 'active').slice(0, 5)
@@ -58,7 +26,7 @@ export default function Dashboard() {
 
       {/* Stat Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-5 mb-8">
-        {statCards.map(({ label, value, icon: Icon, color, bg, text, change }) => (
+        {statCards.map(({ label, value, icon: Icon, bg, text, change }) => (
           <div key={label} className="card p-5">
             <div className="flex items-start justify-between mb-4">
               <div className={`${bg} p-3 rounded-xl`}>
@@ -96,7 +64,7 @@ export default function Dashboard() {
                 tickFormatter={v => `${(v / 1000).toFixed(0)}k`} />
               <Tooltip
                 contentStyle={{ background: '#1e293b', border: 'none', borderRadius: 8, color: '#f8fafc' }}
-                formatter={(v: number) => [formatCurrency(v), 'Revenue']}
+                formatter={(v: unknown) => [formatCurrency(Number(v)), 'Revenue']}
               />
               <Area type="monotone" dataKey="amount" stroke="#3b82f6" strokeWidth={2}
                 fill="url(#colorAmount)" dot={{ fill: '#3b82f6', strokeWidth: 0, r: 3 }} />
@@ -117,7 +85,7 @@ export default function Dashboard() {
               <YAxis tick={{ fontSize: 11, fill: '#94a3b8' }} axisLine={false} tickLine={false} />
               <Tooltip
                 contentStyle={{ background: '#1e293b', border: 'none', borderRadius: 8, color: '#f8fafc' }}
-                formatter={(v: number) => [v, 'Bills']}
+                formatter={(v: unknown) => [Number(v), 'Bills']}
               />
               <Bar dataKey="bills" fill="#3b82f6" radius={[4, 4, 0, 0]} />
             </BarChart>
