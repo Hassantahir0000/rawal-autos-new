@@ -1,32 +1,38 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
+import { api } from '../lib/api'
 
 interface AuthState {
   isAuthenticated: boolean
+  token: string | null
   user: { name: string; email: string } | null
-  login: (email: string, password: string) => boolean
+  login: (email: string, password: string) => Promise<boolean>
   logout: () => void
 }
-
-const MOCK_CREDENTIALS = [
-  { email: 'admin@test.com', password: 'admin123', name: 'Admin' },
-  { email: 'admin@sys.com', password: '123123', name: 'System Admin' },
-]
 
 export const useAuthStore = create<AuthState>()(
   persist(
     (set) => ({
       isAuthenticated: false,
+      token: null,
       user: null,
-      login: (email, password) => {
-        const match = MOCK_CREDENTIALS.find(c => c.email === email && c.password === password)
-        if (match) {
-          set({ isAuthenticated: true, user: { name: match.name, email: match.email } })
+
+      login: async (email, password) => {
+        const res = await api.login(email, password)
+        if (res.token) {
+          set({
+            isAuthenticated: true,
+            token: res.token,
+            user: res.user
+              ? { name: res.user.name, email: res.user.email }
+              : { name: 'Admin', email },
+          })
           return true
         }
         return false
       },
-      logout: () => set({ isAuthenticated: false, user: null }),
+
+      logout: () => set({ isAuthenticated: false, token: null, user: null }),
     }),
     { name: 'rawal-auth' }
   )

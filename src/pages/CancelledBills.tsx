@@ -1,19 +1,24 @@
-import { XCircle } from 'lucide-react'
-import { mockInvoices } from '../data/mock'
+import { XCircle, Loader2 } from 'lucide-react'
+import { useCancelledBills } from '../hooks/useApi'
 import { formatCurrency, formatDate } from '../lib/utils'
 
 export default function CancelledBills() {
-  const cancelledBills = mockInvoices.filter(i => i.status === 'cancelled')
+  const { data: cancelledBills = [], isLoading } = useCancelledBills()
 
   return (
     <div className="p-6 max-w-6xl mx-auto">
-      {/* Header */}
       <div className="mb-8">
         <h1 className="text-2xl font-bold text-slate-800">Cancelled Bills</h1>
-        <p className="text-slate-400 text-sm mt-1">{cancelledBills.length} cancelled invoice{cancelledBills.length !== 1 ? 's' : ''}</p>
+        <p className="text-slate-400 text-sm mt-1">
+          {isLoading ? 'Loading...' : `${cancelledBills.length} cancelled invoice${cancelledBills.length !== 1 ? 's' : ''}`}
+        </p>
       </div>
 
-      {cancelledBills.length === 0 ? (
+      {isLoading ? (
+        <div className="flex items-center justify-center py-20 text-slate-400 gap-2">
+          <Loader2 className="w-5 h-5 animate-spin" /> Loading cancelled bills...
+        </div>
+      ) : cancelledBills.length === 0 ? (
         <div className="card py-20 text-center">
           <XCircle className="w-12 h-12 text-slate-200 mx-auto mb-4" />
           <p className="text-slate-400 font-medium">No cancelled bills</p>

@@ -7,7 +7,7 @@ import { Car, Eye, EyeOff, AlertCircle } from 'lucide-react'
 import { useAuthStore } from '../store/auth'
 
 const schema = z.object({
-  email: z.string().email('Enter a valid email'),
+  email: z.string('Enter a valid email'),
   password: z.string().min(1, 'Password is required'),
 })
 type FormData = z.infer<typeof schema>
@@ -24,13 +24,17 @@ export default function Login() {
 
   if (isAuthenticated) return <Navigate to="/dashboard" replace />
 
-  const onSubmit = (data: FormData) => {
+  const onSubmit = async (data: FormData) => {
     setAuthError('')
-    const success = login(data.email, data.password)
-    if (success) {
-      navigate('/dashboard')
-    } else {
-      setAuthError('Invalid email or password')
+    try {
+      const success = await login(data.email, data.password)
+      if (success) {
+        navigate('/dashboard')
+      } else {
+        setAuthError('Invalid email or password')
+      }
+    } catch {
+      setAuthError('Login failed. Please check your credentials and try again.')
     }
   }
 
@@ -64,7 +68,7 @@ export default function Login() {
                 <label className="form-label">Email Address</label>
                 <input
                   {...register('email')}
-                  type="email"
+                  type="text"
                   placeholder="admin@test.com"
                   className="form-input"
                   autoComplete="email"

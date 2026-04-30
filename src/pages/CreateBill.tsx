@@ -2,9 +2,8 @@ import { useState, useCallback } from 'react'
 import { useForm, useFieldArray, useWatch } from 'react-hook-form'
 import { z } from 'zod'
 import { zodResolver } from '@hookform/resolvers/zod'
-import { Plus, Trash2, CheckCircle } from 'lucide-react'
-import { mockDepartments, mockInvoices } from '../data/mock'
-import { generateInvoiceId } from '../lib/utils'
+import { Plus, Trash2, CheckCircle, Loader2 } from 'lucide-react'
+import { useDepartments, useLastId, useAddBill } from '../hooks/useApi'
 
 const itemSchema = z.object({
   descp: z.string().min(1, 'Required'),
@@ -29,12 +28,17 @@ const GST_RATES = [5, 15, 16, 17, 18]
 
 export default function CreateBill() {
   const [submitted, setSubmitted] = useState(false)
-  const [newInvoiceId] = useState(() =>
-    generateInvoiceId(mockInvoices.map(i => i.invoice_id))
-  )
+  const [submitError, setSubmitError] = useState('')
+
+  const { data: deptsData, isLoading: deptsLoading } = useDepartments()
+  const { data: lastIdData } = useLastId()
+  const addBill = useAddBill()
+
+  const departments = deptsData ?? []
+  const nextBillNo = lastIdData ? Number(lastIdData.lastId) + 1 : '—'
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { register, control, handleSubmit, formState: { errors } } = useForm<BillFormData>({
+  const { register, control, handleSubmit, reset, formState: { errors } } = useForm<BillFormData>({
     resolver: zodResolver(schema) as any,
     defaultValues: {
       dept: '',
@@ -52,8 +56,7 @@ export default function CreateBill() {
   const watchedItems = useWatch({ control, name: 'items' })
 
   const grandTotal = (watchedItems ?? []).reduce((sum: number, item) => {
-    const total = (Number(item.quantity) || 0) * (Number(item.unit_price) || 0)
-    return sum + total
+    return sum + (Number(item.quantity) || 0) * (Number(item.unit_price) || 0)
   }, 0)
 
   const applyGst = useCallback((rate: number) => {
@@ -61,8 +64,32 @@ export default function CreateBill() {
     append({ descp: `GST Applied (${rate}%)`, quantity: 1, unit_price: gstAmount, gst: rate })
   }, [grandTotal, append])
 
-  const onSubmit = (_data: BillFormData) => {
-    setSubmitted(true)
+  const onSubmit = async (data: BillFormData) => {
+    setSubmitError('')
+    const items = data.items.map(item => ({
+      descp: item.descp,
+      quantity: Number(item.quantity),
+      unit_price: Number(item.unit_price),
+      total_price: Number(item.quantity) * Number(item.unit_price),
+      gst: item.gst != null ? Number(item.gst) : null,
+    }))
+    const total_bill = items.reduce((sum, item) => sum + item.total_price, 0)
+
+    try {
+      await addBill.mutateAsync({
+        dept: data.dept,
+        invoice_date: data.invoice_date,
+        vehicle_number: data.vehicle_number,
+        vehicle_type: data.vehicle_type,
+        total_bill,
+        bill4_value: Number(data.bill4_value),
+        bill5_value: Number(data.bill5_value),
+        items,
+      })
+      setSubmitted(true)
+    } catch {
+      setSubmitError('Failed to submit bill. Please try again.')
+    }
   }
 
   if (submitted) {
@@ -71,8 +98,13 @@ export default function CreateBill() {
         <div className="card p-10 text-center">
           <CheckCircle className="w-16 h-16 text-emerald-500 mx-auto mb-4" />
           <h2 className="text-xl font-bold text-slate-800 mb-2">Bill Submitted!</h2>
-          <p className="text-slate-500 mb-6">Invoice <span className="font-semibold text-blue-600">RA-{newInvoiceId}</span> has been created successfully.</p>
-          <button onClick={() => setSubmitted(false)} className="btn-primary">Create Another Bill</button>
+          <p className="text-slate-500 mb-6">The invoice has been created successfully.</p>
+          <button
+            onClick={() => { setSubmitted(false); reset() }}
+            className="btn-primary"
+          >
+            Create Another Bill
+          </button>
         </div>
       </div>
     )
@@ -80,13 +112,20 @@ export default function CreateBill() {
 
   return (
     <div className="p-6 max-w-5xl mx-auto">
-      {/* Header */}
       <div className="mb-6">
         <h1 className="text-2xl font-bold text-slate-800">Create New Bill</h1>
-        <p className="text-slate-400 text-sm mt-1">Bill No: <span className="font-semibold text-blue-600">RA-{newInvoiceId}</span></p>
+        <p className="text-slate-400 text-sm mt-1">
+          Bill No: <span className="font-semibold text-blue-600">#{nextBillNo}</span>
+        </p>
       </div>
 
       <form onSubmit={handleSubmit(onSubmit)}>
+        {submitError && (
+          <div className="mb-4 text-sm text-red-600 bg-red-50 border border-red-100 rounded-lg px-4 py-3">
+            {submitError}
+          </div>
+        )}
+
         {/* Top Section */}
         <div className="card p-6 mb-5">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -94,10 +133,10 @@ export default function CreateBill() {
             <div className="space-y-4">
               <div>
                 <label className="form-label">Department</label>
-                <select {...register('dept')} className="form-input">
-                  <option value="">Select Department</option>
-                  {mockDepartments.map(d => (
-                    <option key={d.dept_id} value={String(d.dept_id)}>{d.dept_name}</option>
+                <select {...register('dept')} className="form-input" disabled={deptsLoading}>
+                  <option value="">{deptsLoading ? 'Loading departments...' : 'Select Department'}</option>
+                  {departments.map(d => (
+                    <option key={d.dept_id} value={d.dept_name}>{d.dept_name}</option>
                   ))}
                 </select>
                 {errors.dept && <p className="text-xs text-red-500 mt-1">{errors.dept.message}</p>}
@@ -161,7 +200,6 @@ export default function CreateBill() {
           </div>
 
           <div className="p-6">
-            {/* Table header */}
             <div className="grid grid-cols-12 gap-3 mb-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">
               <div className="col-span-1">#</div>
               <div className="col-span-5">Description / Particular</div>
@@ -187,19 +225,10 @@ export default function CreateBill() {
                       />
                     </div>
                     <div className="col-span-2">
-                      <input
-                        {...register(`items.${index}.quantity`)}
-                        type="number" min="1"
-                        className="form-input"
-                      />
+                      <input {...register(`items.${index}.quantity`)} type="number" min="1" className="form-input" />
                     </div>
                     <div className="col-span-2">
-                      <input
-                        {...register(`items.${index}.unit_price`)}
-                        type="number" min="0"
-                        placeholder="0"
-                        className="form-input"
-                      />
+                      <input {...register(`items.${index}.unit_price`)} type="number" min="0" placeholder="0" className="form-input" />
                     </div>
                     <div className="col-span-1 text-sm font-medium text-slate-700">
                       {total.toLocaleString()}
@@ -247,8 +276,15 @@ export default function CreateBill() {
 
         {/* Submit */}
         <div className="flex justify-end gap-3">
-          <button type="button" className="btn-secondary">Cancel</button>
-          <button type="submit" className="btn-primary px-8">Submit Bill</button>
+          <button type="button" onClick={() => reset()} className="btn-secondary">Reset</button>
+          <button
+            type="submit"
+            disabled={addBill.isPending}
+            className="btn-primary px-8 flex items-center gap-2 disabled:opacity-60"
+          >
+            {addBill.isPending && <Loader2 className="w-4 h-4 animate-spin" />}
+            Submit Bill
+          </button>
         </div>
       </form>
     </div>
