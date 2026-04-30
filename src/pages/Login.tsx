@@ -110,11 +110,11 @@ export default function Login() {
               </button>
             </form>
 
-            <div className="mt-6 p-4 bg-slate-50 rounded-lg border border-slate-100">
+            {/* <div className="mt-6 p-4 bg-slate-50 rounded-lg border border-slate-100">
               <p className="text-xs font-medium text-slate-500 mb-2">Demo credentials</p>
               <p className="text-xs text-slate-600">Email: <span className="font-mono font-medium">admin@test.com</span></p>
               <p className="text-xs text-slate-600">Password: <span className="font-mono font-medium">admin123</span></p>
-            </div>
+            </div> */}
           </div>
         </div>
       </div>
